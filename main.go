@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/taekion-org/sawtooth-client-sdk-go/examples/intkey"
+	"github.com/hyperledger/sawtooth-sdk-go/protobuf/batch_pb2"
+	"github.com/hyperledger/sawtooth-sdk-go/protobuf/transaction_pb2"
+	"github.com/taekion-org/intkey-stress-test/intkey"
 	"os"
 	flag "github.com/spf13/pflag"
+	"time"
 )
 
 const DEFAULT_URL = "http://localhost:8008"
@@ -24,6 +27,7 @@ func main() {
 	var intName *string = flag.String("int_name", "testkey", "Name of integer to increment")
 	var batchSize *int = flag.Int("batch_size", 100, "Number of transactions per batch")
 	var batchCount *int= flag.Int("batch_count", 1, "Number of batches to submit")
+	var delay *int = flag.Int("delay", 1000, "Milliseconds between submits")
 
 	flag.Parse()
 
@@ -40,36 +44,95 @@ func main() {
 		}
 	}
 
-	// Set the value to zero
-	_, err = client.Set(*intName, 0, DEFAULT_WAIT_TIME)
+	// See if the value exists
+	_, err = client.Show(*intName)
+	if err == nil {
+		handleError(fmt.Errorf("You must specify an unused integer name"))
+	}
+
+	batchIds := make([]string, *batchCount + 1)
+	var lastTransactionId string
+
+	initPayload := intkey.IntkeyPayload{
+		Verb:  intkey.VERB_SET,
+		Name:  *intName,
+		Value: 0,
+	}
+
+	initTransaction, err := client.SawtoothClient.CreateTransaction(&initPayload)
+	if err != nil {
+		handleError(err)
+	}
+	lastTransactionId = initTransaction.HeaderSignature
+
+	initBatch, err := client.CreateBatch([]*transaction_pb2.Transaction{initTransaction})
 	if err != nil {
 		handleError(err)
 	}
 
-	payload := intkey.IntkeyPayload{
-		Verb:  intkey.VERB_INC,
-		Name:  *intName,
-		Value: 1,
+	initBatchList, err := client.CreateBatchList([]*batch_pb2.Batch{initBatch})
+	if err != nil {
+		handleError(err)
 	}
 
-	payloads := make([]interface{}, *batchSize)
-	for i := 0; i < *batchSize; i++ {
-		payloads[i] = &payload
+	batchIds[0] = initBatch.HeaderSignature
+	err = client.SawtoothClient.Transport.SubmitBatchList(initBatchList)
+	if err != nil {
+		handleError(err)
 	}
 
-	batchIds := make([]string, *batchCount)
-	for i := 0; i < *batchCount; i++ {
+	for i := 1; i < *batchCount+1; i++ {
 		fmt.Printf("Batch: %d\n", i)
 
-		batchIds[i], err = client.SawtoothClient.ExecutePayloadBatch(payloads)
+		transactions := make([]*transaction_pb2.Transaction, *batchSize)
+		for j := 0; j < *batchSize; j++ {
+			incPayload := intkey.IntkeyPayload{
+				Verb:  intkey.VERB_INC,
+				Name:  *intName,
+				Value: 1,
+			}
+			incPayload.AddDependency(lastTransactionId)
+
+			transactions[j], err = client.SawtoothClient.CreateTransaction(&incPayload)
+			if err != nil {
+				handleError(err)
+			}
+		}
+
+		lastTransactionId = transactions[len(transactions)-1].HeaderSignature
+
+		batch, err := client.CreateBatch(transactions)
 		if err != nil {
 			handleError(err)
 		}
+
+		batchIds[i] = batch.HeaderSignature
+
+		batchList, err := client.CreateBatchList([]*batch_pb2.Batch{batch})
+		if err != nil {
+			handleError(err)
+		}
+
+		for err := client.SawtoothClient.Transport.SubmitBatchList(batchList); err != nil; err = client.SawtoothClient.Transport.SubmitBatchList(batchList) {
+			fmt.Printf("Error: %s\n", err)
+			time.Sleep(1 * time.Second)
+		}
+		//if err != nil {
+		//	handleError(err)
+		//}
+		time.Sleep(time.Duration(*delay) * time.Microsecond)
 	}
 
 	for i, batchId := range batchIds {
 		fmt.Printf("Waiting for batch %d (%s)\n", i, batchId)
-		client.SawtoothClient.WaitBatch(batchId, 60, 1)
+		status, err := client.SawtoothClient.Transport.GetBatchStatus(batchId, 60)
+		if err != nil {
+			handleError(err)
+		}
+		fmt.Printf("\t%s\n", status)
+		if status != "COMMITTED" {
+			handleError(fmt.Errorf("Batch not completed..."))
+		}
 	}
 
 	// Display the result value
