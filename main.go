@@ -120,7 +120,7 @@ func main() {
 		//if err != nil {
 		//	handleError(err)
 		//}
-		time.Sleep(time.Duration(*delay) * time.Microsecond)
+		time.Sleep(time.Duration(*delay) * time.Millisecond)
 	}
 
 	for i, batchId := range batchIds {
