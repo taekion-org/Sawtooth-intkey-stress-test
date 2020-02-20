@@ -32,15 +32,19 @@ func main() {
 	flag.Parse()
 
 	var client *intkey.IntkeyClient
-	if *transport == "rest" {
-		client, err = intkey.NewIntkeyClient(*url, *keyFile)
-		if err != nil {
-			handleError(err)
-		}
-	} else if *transport == "zmq" {
-		client, err = intkey.NewIntkeyClientZmq(*url, *keyFile)
-		if err != nil {
-			handleError(err)
+	for client == nil {
+		if *transport == "rest" {
+			client, err = intkey.NewIntkeyClient(*url, *keyFile)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				time.Sleep(1 * time.Second)
+			}
+		} else if *transport == "zmq" {
+			client, err = intkey.NewIntkeyClientZmq(*url, *keyFile)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 
