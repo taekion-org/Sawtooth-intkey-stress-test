@@ -27,8 +27,8 @@ var url *string = flag.String("url", DEFAULT_URL, "Sawtooth URL")
 var keyFile *string = flag.String("keyfile", "", "Sawtooth private key file")
 var transport *string = flag.String("transport", DEFAULT_TRANSPORT, "Sawtooth transport ('rest' or 'zmq')")
 var intKey *string = flag.String("int_key", getUUIDKey(), "Name of integer to increment")
-var batchSize *int = flag.Int("batch_size", 100, "Number of transactions per batch")
-var batchCount *int= flag.Int("batch_count", 1, "Number of batches to submit")
+var batchSize *int = flag.Int("batch_size", 0, "Number of transactions per batch")
+var batchCount *int= flag.Int("batch_count", 0, "Number of batches to submit")
 var delay *int64 = flag.Int64("delay", 1000, "Milliseconds between submits")
 var noDeps *bool = flag.Bool("nodeps", false, "Disable transaction dependencies")
 var fastRetries *int = flag.Int("fast_retries", 0, "Number of times to quickly (~100ms) retry a batch if rejected")
@@ -51,6 +51,12 @@ func main() {
 	var err error
 
 	flag.Parse()
+
+	if *batchSize == 0 || *batchCount == 0 {
+		fmt.Println("Error: you must set --batch_size and --batch_count")
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 
 	// Initialize the client (uses a copy of the example intkey client from sawtooth-client-sdk-go).
 	for client == nil {
