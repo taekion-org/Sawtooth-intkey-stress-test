@@ -12,6 +12,7 @@ RUN apt-get install -y \
     python3-pip \
     pkg-config
 
+RUN /usr/bin/pip3 install --upgrade pip
 RUN python3 -m pip install grpcio grpcio-tools
 
 RUN wget https://dl.google.com/go/go1.13.9.linux-amd64.tar.gz

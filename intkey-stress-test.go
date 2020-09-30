@@ -28,7 +28,7 @@ var keyFile *string = flag.String("keyfile", "", "Sawtooth private key file")
 var transport *string = flag.String("transport", DEFAULT_TRANSPORT, "Sawtooth transport ('rest' or 'zmq')")
 var intKey *string = flag.String("int_key", getUUIDKey(), "Name of integer to increment")
 var batchSize *int = flag.Int("batch_size", 0, "Number of transactions per batch")
-var batchCount *int= flag.Int("batch_count", 0, "Number of batches to submit")
+var batchCount *int = flag.Int("batch_count", 0, "Number of batches to submit")
 var delay *int64 = flag.Int64("delay", 1000, "Milliseconds between submits")
 var noDeps *bool = flag.Bool("nodeps", false, "Disable transaction dependencies")
 var fastRetries *int = flag.Int("fast_retries", 0, "Number of times to quickly (~100ms) retry a batch if rejected")
@@ -89,12 +89,12 @@ func main() {
 	// On any subsequent signal, kill the program immediately.
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT)
-	sigCount := 0;
+	sigCount := 0
 	go func() {
 		for {
 			sig := <-sigs
 			fmt.Println(sig)
-			sigCount++;
+			sigCount++
 			if sigCount > 1 {
 				os.Exit(-1)
 			}
@@ -171,7 +171,7 @@ func submitTransactions(transactions []*transaction_pb2.Transaction) time.Durati
 	for err := client.SawtoothClient.Transport.SubmitBatchList(batchList); err != nil; err = client.SawtoothClient.Transport.SubmitBatchList(batchList) {
 		fmt.Printf("Error: %s\n", err)
 		if retries < *fastRetries {
-			time.Sleep(100*time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 			retries++
 			continue
 		}
@@ -182,7 +182,7 @@ func submitTransactions(transactions []*transaction_pb2.Transaction) time.Durati
 		mutex.Lock()
 	}
 
-	batchIds = append(batchIds,batch.HeaderSignature)
+	batchIds = append(batchIds, batch.HeaderSignature)
 
 	return time.Now().Sub(start)
 }
@@ -191,9 +191,10 @@ func finishUp() {
 	mutex.Lock()
 	for i, batchId := range batchIds {
 		fmt.Printf("Waiting for batch %d (%s)\n", i, batchId)
+		// Intkey stress test error is occurring here.
 		status, err := client.SawtoothClient.Transport.GetBatchStatus(batchId, DEFAULT_WAIT_TIME)
 		if err != nil {
-			handleError(err)
+			handleError(fmt.Errorf("Error in Get Batch Status, ", err.Error()))
 		}
 		fmt.Printf("\t%s\n", status)
 		if status != "COMMITTED" {
@@ -208,5 +209,5 @@ func finishUp() {
 	}
 
 	fmt.Printf("Result: %d\n", result)
-	os.Exit(0);
+	os.Exit(0)
 }
