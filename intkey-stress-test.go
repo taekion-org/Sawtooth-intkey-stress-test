@@ -191,7 +191,6 @@ func finishUp() {
 	mutex.Lock()
 	for i, batchId := range batchIds {
 		fmt.Printf("Waiting for batch %d (%s)\n", i, batchId)
-		// Intkey stress test error is occurring here.
 		status, err := client.SawtoothClient.Transport.GetBatchStatus(batchId, DEFAULT_WAIT_TIME)
 		if err != nil {
 			handleError(fmt.Errorf("Error in Get Batch Status, ", err.Error()))
