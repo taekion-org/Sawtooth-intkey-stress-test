@@ -135,6 +135,10 @@ func main() {
 			if err != nil {
 				handleError(err)
 			}
+
+			if incPayload.Name != *intKey {
+				handleError(fmt.Errorf("Key dosen't match: %s", incPayload.Name));
+			}
 		}
 		// We save the id of the last transaction in the batch.
 		// This is used to create a dependency on the previous batch, causing them to be
