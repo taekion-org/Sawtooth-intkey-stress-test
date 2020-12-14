@@ -6,11 +6,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/taekion-org/sawtooth-client-sdk-go/examples/intkey"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const DEFAULT_URL = "http://localhost:8008"
 const DEFAULT_TRANSPORT = "rest"
-const DEFAULT_WAIT_TIME = 60
 
 var rootCmd = &cobra.Command{
 	Use:   "intkey-stress-test",
@@ -28,10 +29,10 @@ type CommonArgs struct {
 var commonArgs CommonArgs
 
 func init() {
-	rootCmd.Flags().StringVar(&commonArgs.url, "url", DEFAULT_URL, "Sawtooth URL")
-	rootCmd.Flags().StringVar(&commonArgs.keyFile, "keyfile", "", "Sawtooth private key file")
-	rootCmd.Flags().StringVar(&commonArgs.transport, "transport", DEFAULT_TRANSPORT, "Sawtooth transport ('rest' or 'zmq')")
-	rootCmd.Flags().StringVar(&commonArgs.intKey, "int_key", getUUIDKey(), "Name of integer to increment")
+	rootCmd.PersistentFlags().String("url", DEFAULT_URL, "Sawtooth URL")
+	rootCmd.PersistentFlags().String("keyfile", "", "Sawtooth private key file")
+	rootCmd.PersistentFlags().String("transport", DEFAULT_TRANSPORT, "Sawtooth transport ('rest' or 'zmq')")
+	rootCmd.PersistentFlags().String("int_key", getUUIDKey(), "Name of integer to increment")
 }
 
 func root(cmd *cobra.Command, _ []string) {
@@ -73,6 +74,26 @@ func getClient() (*intkey.IntkeyClient, error) {
 func handleError(err error) {
 	fmt.Printf("%s error:\n - %s\n", rootCmd.Use, err)
 	os.Exit(-1)
+}
+
+func registerSigintHandler(callback func()) {
+	// Set up a signal handler for SIGINT.
+	// On the first signal, invoke the passed callback.
+	// On any subsequent signal, kill the program immediately.
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT)
+	sigCount := 0
+	go func() {
+		for {
+			<-sigs
+			sigCount++
+			if sigCount > 1 {
+				fmt.Println("Exiting...")
+				os.Exit(-1)
+			}
+			callback()
+		}
+	}()
 }
 
 func Execute() {
