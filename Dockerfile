@@ -15,8 +15,8 @@ RUN apt-get install -y \
 RUN /usr/bin/pip3 install --upgrade pip
 RUN python3 -m pip install grpcio grpcio-tools
 
-RUN wget https://dl.google.com/go/go1.13.9.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.13.9.linux-amd64.tar.gz
+RUN wget https://dl.google.com/go/go1.15.6.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.15.6.linux-amd64.tar.gz
 RUN mkdir /go
 ENV GOPATH=/go
 RUN echo $PATH
