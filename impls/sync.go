@@ -335,6 +335,10 @@ func (self *IntkeyTestSync) checkLoop() bool {
 			delete(self.batchIds, batchId)
 			batchesCommitted++
 
+		case "UNKNOWN":
+			logContext.WithField("transaction", batchId).Warn("Batch in UNKNOWN status, removing")
+			delete(self.batchIds, batchId)
+
 		case "INVALID":
 			logContext.Errorf("Batch %s is INVALID", batchId)
 		}
