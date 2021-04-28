@@ -1,4 +1,4 @@
-FROM hyperledger/sawtooth-shell:1.1.5
+FROM hyperledger/sawtooth-shell:1.2
 
 RUN apt-get update -y
 RUN apt-get install -y \
